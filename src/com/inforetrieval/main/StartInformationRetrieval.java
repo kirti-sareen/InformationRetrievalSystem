@@ -1,5 +1,6 @@
 package com.inforetrieval.main;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Scanner;
 
@@ -48,8 +49,9 @@ public class StartInformationRetrieval {
         	case "1": {
         		System.out.println("Indexing your files...\n");
         		IndexingManager infoManager = new IndexingManager();
-                infoManager.startIndexing(filePath);
+        		Path path = infoManager.startIndexing(filePath);
                 System.out.println("Indexing Completed.");
+                infoManager.retrieveParsedDocs(path);
         		break;
         	}
         	case "2": {
