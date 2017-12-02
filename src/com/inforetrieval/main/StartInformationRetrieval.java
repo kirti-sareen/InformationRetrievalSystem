@@ -1,4 +1,5 @@
 package com.inforetrieval.main;
+
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -10,66 +11,39 @@ import com.inforetrieval.manager.IndexingManager;
 public class StartInformationRetrieval {
 	public static void main(String[] args) throws Exception {
 
-		String filePath = null;
+		String filePath = args[0];
+		String indexPath = args[1];
+		String rankingModel = args[2];
+		String query = args[3];
 		
-		
-		if(false) 
-		{
+		if (args.length < 4) {
 			System.out.println(Constants.HELP_MESSAGE);
 			return;
-		}
-		else{
+		} else {
 			StringBuilder stringBuilder = new StringBuilder();
-			for(String s : args) {
-				stringBuilder.append(s);
+			for (int i = 3; i < args.length; i++) {
+				stringBuilder.append(args[i] + " ");
 			}
-			filePath = stringBuilder.toString().trim();
-			filePath="E://test_data";
-			if(!Files.exists(Paths.get(filePath)))
-			{
+			query = stringBuilder.toString();
+			if (!Files.exists(Paths.get(filePath))) {
 				System.out.println(Constants.PATH_NON_EXISTENT);
 				System.out.println(Constants.HELP_MESSAGE);
 				return;
-			}
-			else{
+			} else {
 				System.out.println(Constants.WELCOME_MESSAGE);
-				executeTask(filePath);
+				executeTask(filePath, indexPath, rankingModel, query);
 			}
 		}
-        
-    }
-	public static void executeTask(String filePath){
-		Scanner scanner = new Scanner(System.in);
-		do{
-			System.out.println(Constants.MENU_OPTIONS);
-        	String choice = "";
-        		if(scanner.hasNext())
-        			choice = scanner.next();
-        	switch(choice){
-        	case "1": {
-        		System.out.println("Indexing your files...\n");
-        		IndexingManager infoManager = new IndexingManager();
-        		Path path = infoManager.startIndexing(filePath);
-                System.out.println("Indexing Completed.");
-                infoManager.retrieveParsedDocs(path);
-        		break;
-        	}
-        	case "2": {
-        		System.out.println("Search for your query started...\n");
-        		System.out.println("Please find search results below:\n");
-        		break;
-        	}
-        	case "3": {
-        		System.out.println("Exiting...\nThank You for using Information Retieval System !!!");
-        		scanner.close();
-        		System.exit(0);
-        		break;
-        	}
-        	default:{
-        		System.out.println("Sorry...This is not a valid choice.");
-        	}
-        		
-        	}
-        }while(true);
+
+	}
+
+	public static void executeTask(String filePath, String indexPath, String rankingModel, String query) {
+
+		System.out.println("Indexing your files...\n");
+		IndexingManager infoManager = new IndexingManager();
+		Path path = infoManager.startIndexing(filePath,indexPath,rankingModel);
+		System.out.println("Indexing Completed.");
+		infoManager.retrieveParsedDocs(path);
+
 	}
 }

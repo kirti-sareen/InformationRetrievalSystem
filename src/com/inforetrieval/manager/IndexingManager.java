@@ -1,6 +1,7 @@
 package com.inforetrieval.manager;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -22,20 +23,19 @@ import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.Term;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
+import org.apache.lucene.search.similarities.ClassicSimilarity;
+import org.apache.lucene.search.similarities.BM25Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
-import com.inforetrieval.constants.Constants;
-
 public class IndexingManager {
-	public Path startIndexing(String folderPath){
+	public Path startIndexing(String folderPath,String indexPath, String rankingModel){
 
 	final Path docPath = Paths.get(folderPath);
 		
-		Path indexFilePath = null;
-	
-		indexFilePath = Paths.get(docPath.getParent().toString(),Constants.INDEX);
+		Path indexFilePath = Paths.get(indexPath);
 		
 		if (!Files.isReadable(docPath)) {
 			System.out.println("Unable to read file from the path: "+docPath.toAbsolutePath());
@@ -44,7 +44,7 @@ public class IndexingManager {
 		try {
 			System.out.println("Indexing started for: '" + indexFilePath +"'");
 	
-			Directory directory = FSDirectory.open(indexFilePath);
+			Directory directory;
 	
 			/**
 			 * EnglishAnalyzer implements PorterStemmer Algorithm using PorterStemFilter
@@ -52,14 +52,30 @@ public class IndexingManager {
 			Analyzer analyzer = new EnglishAnalyzer();	
 	
 			IndexWriterConfig indexWriterConfig = new IndexWriterConfig(analyzer);
+			ClassicSimilarity classicSimilarity = new ClassicSimilarity();
+			BM25Similarity bm25Similarity = new BM25Similarity();
+
+			
 			
 			/*
 			 * Creating index in directory
 			 */
-			
-			// Create a new index in the directory, removing any previously indexed documents:
-			indexWriterConfig.setOpenMode(OpenMode.CREATE);
-	
+			File file=new File(indexPath);
+			if (Files.notExists(indexFilePath)) {
+				// Create a new index in the directory, removing any previously indexed documents:
+				indexWriterConfig.setOpenMode(OpenMode.CREATE);
+				directory = FSDirectory.open(indexFilePath);
+			} else {
+				// Add new documents to an existing index:
+				indexWriterConfig.setOpenMode(OpenMode.CREATE_OR_APPEND);
+				directory = FSDirectory.open(indexFilePath);
+			}
+			if(rankingModel.equalsIgnoreCase("VS")){
+				indexWriterConfig.setSimilarity(classicSimilarity);
+			}
+			else if(rankingModel.equalsIgnoreCase("OK")){
+				indexWriterConfig.setSimilarity(bm25Similarity);
+			}
 			IndexWriter indexWriter = new IndexWriter(directory, indexWriterConfig);
 			indexFiles(indexWriter, docPath);
 	
@@ -155,8 +171,12 @@ public class IndexingManager {
 	
 				if (indexWriter.getConfig().getOpenMode() == OpenMode.CREATE) {
 					// New index, adding new document:
-					System.out.println("Indexing file:  " + filePath);
+					System.out.println("Adding index file:  " + filePath);
 					indexWriter.addDocument(document);
+				}
+				else if(indexWriter.getConfig().getOpenMode() == OpenMode.CREATE_OR_APPEND){
+					System.out.println("updating index file:" + filePath);
+					indexWriter.updateDocument(new Term("FilePath", filePath.toString()), document);
 				}
 			}
 		}//end of indexDoc
