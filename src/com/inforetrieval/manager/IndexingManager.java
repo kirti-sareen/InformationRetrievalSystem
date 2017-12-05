@@ -31,7 +31,7 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
 public class IndexingManager {
-	public Path startIndexing(String folderPath,String indexPath, String rankingModel){
+	public void startIndexing(String folderPath,String indexPath, String rankingModel){
 
 	final Path docPath = Paths.get(folderPath);
 		
@@ -39,13 +39,14 @@ public class IndexingManager {
 		
 		if (!Files.isReadable(docPath)) {
 			System.out.println("Unable to read file from the path: "+docPath.toAbsolutePath());
+			System.exit(0);
 		}
 		
 		try {
 			System.out.println("Indexing started for: '" + indexFilePath +"'");
 	
 			Directory directory;
-	
+
 			/**
 			 * EnglishAnalyzer implements PorterStemmer Algorithm using PorterStemFilter
 			 */
@@ -88,8 +89,6 @@ public class IndexingManager {
 		catch (Exception e) {
 				e.printStackTrace();
 		}
-		
-		return indexFilePath;
 	}
 	/**
 	* Indexes the given file using the given writer, or if a directory is given,
@@ -158,7 +157,7 @@ public class IndexingManager {
 				// For example the long value 2011021714 would mean
 				// February 17, 2011, 2-3 PM.
 	
-				Field lastModifiedData = new StringField("LastModified", new Long(lastModifiedDate).toString(), Field.Store.YES);
+				Field lastModifiedData = new StringField("LastModified", ((Long)lastModifiedDate).toString(), Field.Store.YES);
 				
 				document.add(lastModifiedData);
 	

@@ -38,15 +38,9 @@ public class SearchManager {
 			System.exit(0);
 		}
 
-		// String field = "contents";
 		String field = "Content";
-		String queries = null;
-		int repeat = 0;
-		String queryString = null;
 		int hitsPerPage = 10;
 
-		// IndexReader reader =
-		// DirectoryReader.open(FSDirectory.open(Paths.get(index)));
 		IndexReader reader = DirectoryReader.open(FSDirectory.open(indexPath));
 		ClassicSimilarity classicSimilarity = new ClassicSimilarity();
 		BM25Similarity bm25Similarity = new BM25Similarity();
@@ -92,9 +86,9 @@ public class SearchManager {
 		System.out.println(numTotalHits + " total matching documents");
 		hits = searcher.search(query, numTotalHits).scoreDocs;
 		Document doc = new Document();
-		 SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+		SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+		int i = 1;
 		for (ScoreDoc scoreDoc : hits) {
-			int i = 1;
 			doc = searcher.doc(scoreDoc.doc);
 			String path = doc.get("FilePath");
 			if (path != null) {
