@@ -1,16 +1,9 @@
 package com.inforetrieval.manager;
 
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.document.Document;
@@ -21,89 +14,83 @@ import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.search.similarities.BM25Similarity;
-import org.apache.lucene.search.similarities.ClassicSimilarity;
 import org.apache.lucene.store.FSDirectory;
+import com.inforetrieval.constants.Constants;
+import com.inforetrieval.util.Utils;
+import net.htmlparser.jericho.Source;
 
-import com.inforetrieval.util.HTMLfileCheck;
-
+/**
+ * Handles searching of entered query.
+ *
+ */
 public class SearchManager {
-	/** Simple command-line based search demo. */
+	static Utils util = new Utils();
+	
 	public void initiateSearch(Path indexPath, String searchString, String rankingModel) throws Exception {
 
-		String splChrs = "-/@#$%^&_+=()!{};.*,<>?':|";
+		String splChrs = Constants.SPL_CHARS;
 		boolean found = searchString.matches("[" + splChrs + "]+");
 		if (found) {
-			System.out.println("Improper Search Query.");
+			System.out.println(Constants.IMPROPER_SEARCH_QUERY);
 			System.exit(0);
 		}
 
-		String field = "Content";
-		int hitsPerPage = 10;
-
-		IndexReader reader = DirectoryReader.open(FSDirectory.open(indexPath));
-		ClassicSimilarity classicSimilarity = new ClassicSimilarity();
-		BM25Similarity bm25Similarity = new BM25Similarity();
-
-		IndexSearcher searcher = new IndexSearcher(reader);
-		if (rankingModel.equalsIgnoreCase("VS")) {
-			searcher.setSimilarity(classicSimilarity);
-		} else if (rankingModel.equalsIgnoreCase("OK")) {
-			searcher.setSimilarity(bm25Similarity);
-		}
+		IndexReader indexReader = DirectoryReader.open(FSDirectory.open(indexPath));
+		
+		IndexSearcher searcher = new IndexSearcher(indexReader);
+		searcher.setSimilarity(util.getSimilarity(rankingModel));
 
 		// English Analyzer used for both Indexing and Searching as it uses
 		// Porter Stemmer
 		Analyzer analyzer = new EnglishAnalyzer();
-
-		QueryParser parser = new QueryParser(field, analyzer);
-
+		QueryParser parser = new QueryParser(Constants.FIELD_CONTENT, analyzer);
 		Query query = parser.parse(searchString);
-		searcher.search(query, 100);
-		doPagingSearch(searcher, query, hitsPerPage);
-
-		reader.close();
+		search(searcher, query);
+		indexReader.close();
 	}
 
+
 	/**
-	 * This demonstrates a typical paging search scenario, where the search
-	 * engine presents pages of size n to the user. The user can then go to the
-	 * next page if interested in the next hits.
-	 *
-	 * When the query is executed for the first time, then only enough results
-	 * are collected to fill 5 result pages. If the user wants to page beyond
-	 * this limit, then the query is executed another time and all hits are
-	 * collected.
-	 *
+	 * Makes a search using indexSearcher by passing the query to the searcher
+	 * @param indexSearcher
+	 * @param query
+	 * @throws IOException
 	 */
-	public static void doPagingSearch(IndexSearcher searcher, Query query, int hitsPerPage) throws IOException {
+	private void search(IndexSearcher indexSearcher, Query query) throws IOException {
 
-		// Collect enough docs to show 5 pages
-		TopDocs results = searcher.search(query, 5 * hitsPerPage);
-		ScoreDoc[] hits = results.scoreDocs;
-
-		int numTotalHits = (int) results.totalHits;
-		System.out.println(numTotalHits + " total matching documents");
-		hits = searcher.search(query, numTotalHits).scoreDocs;
+		TopDocs topDocs = indexSearcher.search(query,Constants.MAX_SEARCH_RESULTS); //TopDocs points to the top N search results which matches the search criteria.
+		ScoreDoc[] scoreDocs = topDocs.scoreDocs;
+		System.out.println(Constants.ALL_RESULTS+ topDocs.totalHits);
+		if(topDocs.totalHits > Constants.MAX_SEARCH_RESULTS)//show the top most n relevant results required 
+		System.out.println(Constants.MAX_SEARCH_RESULTS +Constants.MOST_REL_MSG);
 		Document doc = new Document();
-		SimpleDateFormat simpleDateFormat = new SimpleDateFormat("MM/dd/yyyy HH:mm:ss");
+		SimpleDateFormat simpleDateFormat = new SimpleDateFormat(Constants.DATE_FORMAT);
+		Source source = null;
 		int i = 1;
-		for (ScoreDoc scoreDoc : hits) {
-			doc = searcher.doc(scoreDoc.doc);
-			String path = doc.get("FilePath");
+		
+		//print required information of the results
+		for (ScoreDoc scoreDoc : scoreDocs) {
+			doc = indexSearcher.doc(scoreDoc.doc);
+			String path = doc.get(Constants.FIELD_PATH);
 			if (path != null) {
-				System.out.println("Rank of the document is : " + i);
-				System.out.println("Path of the document : " + doc.get("FilePath"));
-				Date date = new Date(Long.parseLong(doc.get("LastModified")));
-				System.out.println("Last Modification time:" + simpleDateFormat.format(date));
-				System.out.println("Relevance score:" + scoreDoc.score);
-
-				HTMLfileCheck.formatChecking(path);
+				System.out.println(Constants.DOC_RANK_MSG + i);
+				System.out.println(Constants.DOC_PATH_MSG + doc.get(Constants.FIELD_PATH));
+				Date date = new Date(Long.parseLong(doc.get(Constants.FIELD_LAST_UPDATED)));
+				System.out.println(Constants.DOC_LAST_UPDATED_MSG + simpleDateFormat.format(date));
+				System.out.println(Constants.DOC_REL_SCORE_MSG + scoreDoc.score);
+				
+				if(util.isHTMLFile(path)){//check if the file is an html file
+					source = util.readHTMLFile(path);
+					if(source != null){//print the data from source for title and summary tags
+						util.printTitle(source);
+						util.printSummary(source);
+					}
+				}
 			} else {
-				System.out.println((i) + ". " + "No path for this document");
+				System.out.println(Constants.NO_PATH+i);
 			}
+			util.insertNewLine();
 			i++;
-
 		}
 	}
 }

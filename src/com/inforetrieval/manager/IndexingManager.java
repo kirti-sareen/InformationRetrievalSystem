@@ -1,7 +1,6 @@
 package com.inforetrieval.manager;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -16,7 +15,6 @@ import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.en.EnglishAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
-import org.apache.lucene.document.LongPoint;
 import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.DirectoryReader;
@@ -25,45 +23,54 @@ import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.index.IndexWriterConfig.OpenMode;
-import org.apache.lucene.search.similarities.ClassicSimilarity;
-import org.apache.lucene.search.similarities.BM25Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
-public class IndexingManager {
-	public void startIndexing(String folderPath,String indexPath, String rankingModel){
+import com.inforetrieval.constants.Constants;
+import com.inforetrieval.util.Utils;
 
-	final Path docPath = Paths.get(folderPath);
-		
+/**
+ * Handles indexing of files
+ *
+ */
+public class IndexingManager {
+
+	/**
+	 * Start indexing of documents in the provided document path
+	 * 
+	 * @param folderPath
+	 * @param indexPath
+	 * @param rankingModel
+	 */
+	public void startIndexing(String folderPath, String indexPath, String rankingModel) {
+
+		final Path docPath = Paths.get(folderPath);
+
 		Path indexFilePath = Paths.get(indexPath);
-		
+
 		if (!Files.isReadable(docPath)) {
-			System.out.println("Unable to read file from the path: "+docPath.toAbsolutePath());
+			System.out.println(Constants.UNABLE_TO_READ_FILE + docPath.toAbsolutePath());
 			System.exit(0);
 		}
-		
+
 		try {
-			System.out.println("Indexing started for: '" + indexFilePath +"'");
-	
+			System.out.println(Constants.INDEXING_MSG + indexFilePath);
+
 			Directory directory;
 
 			/**
-			 * EnglishAnalyzer implements PorterStemmer Algorithm using PorterStemFilter
+			 * EnglishAnalyzer implements PorterStemmer Algorithm using
+			 * PorterStemFilter
 			 */
-			Analyzer analyzer = new EnglishAnalyzer();	
-	
-			IndexWriterConfig indexWriterConfig = new IndexWriterConfig(analyzer);
-			ClassicSimilarity classicSimilarity = new ClassicSimilarity();
-			BM25Similarity bm25Similarity = new BM25Similarity();
+			Analyzer analyzer = new EnglishAnalyzer();
 
-			
-			
+			IndexWriterConfig indexWriterConfig = new IndexWriterConfig(analyzer);
 			/*
 			 * Creating index in directory
 			 */
-			File file=new File(indexPath);
 			if (Files.notExists(indexFilePath)) {
-				// Create a new index in the directory, removing any previously indexed documents:
+				// Create a new index in the directory, removing any previously
+				// indexed documents:
 				indexWriterConfig.setOpenMode(OpenMode.CREATE);
 				directory = FSDirectory.open(indexFilePath);
 			} else {
@@ -71,140 +78,114 @@ public class IndexingManager {
 				indexWriterConfig.setOpenMode(OpenMode.CREATE_OR_APPEND);
 				directory = FSDirectory.open(indexFilePath);
 			}
-			if(rankingModel.equalsIgnoreCase("VS")){
-				indexWriterConfig.setSimilarity(classicSimilarity);
-			}
-			else if(rankingModel.equalsIgnoreCase("OK")){
-				indexWriterConfig.setSimilarity(bm25Similarity);
-			}
+			Utils util = new Utils();
+			indexWriterConfig.setSimilarity(util.getSimilarity(rankingModel));
 			IndexWriter indexWriter = new IndexWriter(directory, indexWriterConfig);
 			indexFiles(indexWriter, docPath);
-	
 			indexWriter.close();
-	
-	
+			
+
+			IndexReader indexReader = DirectoryReader.open(FSDirectory.open(indexFilePath));
+			System.out.println("Total indexed file: " + indexReader.numDocs());
+			indexReader.close();
 		} catch (IOException e) {
 			e.printStackTrace();
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-		catch (Exception e) {
-				e.printStackTrace();
-		}
+		
 	}
+
 	/**
-	* Indexes the given file using the given writer, or if a directory is given,
-	* recurses over files and directories found under the given directory.
-	*
-	* NOTE: This method indexes one document per input file.  This is slow.  For good
-	* throughput, put multiple documents into your input file(s).  An example of this is
-	* in the benchmark module, which can create "line doc" files, one document per line,
-	* using the
-	* <a href="../../../../../contrib-benchmark/org/apache/lucene/benchmark/byTask/tasks/WriteLineDocTask.html"
-	* >WriteLineDocTask</a>.
-	*
-	* @param writer Writer to the index where the given file/dir info will be stored
-	* @param path The file to index, or the directory to recurse into to find files to index
-	* @throws IOException If there is a low-level I/O error
-	*/
-	static void indexFiles(final IndexWriter indexWriter, Path path) throws IOException {
+	 * Indexes the given file using the given writer, or if a directory is
+	 * given, recurses over files and directories found under the given
+	 * directory.
+	 *
+	 *
+	 * @param writer
+	 *            Creates/updates indexes during the indexing process.
+	 * @param path
+	 *            The path of files to be indexed.
+	 * @throws IOException
+	 */
+	private void indexFiles(final IndexWriter indexWriter, Path path) throws IOException {
 		if (Files.isDirectory(path)) {
 			Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
 				@Override
 				public FileVisitResult visitFile(Path filePath, BasicFileAttributes fileAttr) throws IOException {
 					try {
-						if(Files.isReadable(filePath)){
+						if (Files.isReadable(filePath)) {
 							indexFile(indexWriter, filePath, fileAttr.lastModifiedTime().toMillis());
-						}
-						else{
-							System.out.println("Unable to read file from the path: "+filePath.toAbsolutePath());
+						} else {
+							System.out.println(Constants.UNABLE_TO_READ_FILE + filePath.toAbsolutePath());
 						}
 					} catch (IOException e) {
 						e.printStackTrace();
-					}
-					catch (Exception e) {
+					} catch (Exception e) {
 						e.printStackTrace();
 					}
 					return FileVisitResult.CONTINUE;
 				}
 			});
 		} else {
-			if(Files.isReadable(path)){
+			if (Files.isReadable(path)) {
 				indexFile(indexWriter, path, Files.getLastModifiedTime(path).toMillis());
-			}
-			else{
-				System.out.println("Unable to read file from the path: "+path.toAbsolutePath());
+			} else {
+				System.out.println(Constants.UNABLE_TO_READ_FILE + path.toAbsolutePath());
 			}
 		}
-		}
-	
-		/** Indexes each document */
-		static void indexFile(IndexWriter indexWriter, Path filePath, long lastModifiedDate) throws IOException {
-			try (InputStream stream = Files.newInputStream(filePath)) {
-				// make a new, empty document
-				Document document = new Document();
-	
-				// Add the path of the file as a field named "FilePath".  Use a
-				// field that is indexed (i.e. searchable), but don't tokenize
-				// the field into separate words and don't index term frequency
-				// or positional information:
-				Field filePathData = new StringField("FilePath", filePath.toString(), Field.Store.YES);
-				document.add(filePathData);
-	
-				// Add the last modified date of the file a field named "LastModified".
-				// Use a LongPoint that is indexed (i.e. efficiently filterable with
-				// PointRangeQuery).This indexes to milli-second resolution, which
-				// is often too fine.  You could instead create a number based on
-				// year/month/day/hour/minutes/seconds, down the resolution you require.
-				// For example the long value 2011021714 would mean
-				// February 17, 2011, 2-3 PM.
-	
-				Field lastModifiedData = new StringField("LastModified", ((Long)lastModifiedDate).toString(), Field.Store.YES);
-				
-				document.add(lastModifiedData);
-	
-				// Adding the contents of file to a field named "content".
-				// Specify a Reader,so that the text of the file is tokenized and indexed, but not stored.
-				
-				//Adding file content by changing to UTF-8 encoding.
-				//This enables searching for special characters.
-				document.add(new TextField("Content", new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))));
-	
-				if (indexWriter.getConfig().getOpenMode() == OpenMode.CREATE) {
-					// New index, adding new document:
-					System.out.println("Adding index file:  " + filePath);
-					indexWriter.addDocument(document);
-				}
-				else if(indexWriter.getConfig().getOpenMode() == OpenMode.CREATE_OR_APPEND){
-					System.out.println("updating index file:" + filePath);
-					indexWriter.updateDocument(new Term("FilePath", filePath.toString()), document);
-				}
-			}
-		}//end of indexDoc
+	}
 
-		/**
-		 * @param path
-		 * 
-		 * This method is used to return list of parsed documents
-		 */
-		public void retrieveParsedDocs(Path path)
-		{
-			try {
-				IndexReader indexReader = DirectoryReader.open(FSDirectory.open(path));
-				Document document = null;
-				if(indexReader.numDocs()>0){
-					System.out.println("Please find below list of indexed files:");
-				}
-				for(int i=1;i<indexReader.numDocs()+1;i++)
-				{
-					document = indexReader.document(i-1);
-					System.out.println((i)+") "+document.get("FilePath"));
-				}
-				indexReader.close();
-			} catch (IOException e) {
-				e.printStackTrace();
+	/** Index each document */
+	private void indexFile(IndexWriter indexWriter, Path filePath, long lastModifiedDate) throws IOException {
+		try (InputStream stream = Files.newInputStream(filePath)) {
+			// document represents a virtual document with Fields
+			Document document = new Document();
+
+			// Field represents the key value pair relationship where a key is
+			// used to identify the value to be indexed.
+
+			// Create fields in the document.
+			Field filePathData = new StringField(Constants.FIELD_PATH, filePath.toString(), Field.Store.YES);
+			Field lastModifiedData = new StringField(Constants.FIELD_LAST_UPDATED, ((Long) lastModifiedDate).toString(),
+					Field.Store.YES);
+			Field content = new TextField(Constants.FIELD_CONTENT,
+					new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8)));
+
+			// Adding created fields to the document.
+			document.add(filePathData);
+			document.add(lastModifiedData);
+			document.add(content);
+
+			if (indexWriter.getConfig().getOpenMode() == OpenMode.CREATE) {
+				// New index, adding new document:
+				System.out.println(Constants.ADD_INDEX + filePath);
+				indexWriter.addDocument(document);
+			} else if (indexWriter.getConfig().getOpenMode() == OpenMode.CREATE_OR_APPEND) {
+				System.out.println(Constants.UPDATE_INDEX + filePath);
+				indexWriter.updateDocument(new Term(Constants.FIELD_PATH, filePath.toString()), document);// Delete
 			}
-			catch(Exception e){
-				e.printStackTrace();
-			}
-	
+			
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
+	}
+	
+	public static void getParsedDocs(Path indexPath)
+	{
+		try {
+			IndexReader reader = DirectoryReader.open(FSDirectory.open(indexPath));
+			Document tempDoc = null;
+			for(int i=0;i<reader.numDocs();i++)
+			{
+				tempDoc = reader.document(i);
+				System.out.println((i+1)+". "+tempDoc.get(Constants.FIELD_PATH));
+			}
+			reader.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
 }
