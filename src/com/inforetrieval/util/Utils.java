@@ -20,21 +20,24 @@ import net.htmlparser.jericho.Source;
  *
  */
 public class Utils {
-	
-	
-	/**Checks whether the input ranking model is a valid one.
+
+	/**
+	 * Checks whether the input ranking model is a valid one.
+	 * 
 	 * @param rankingModel
 	 * @return
 	 */
-	public boolean validRankingModel(String rankingModel){
-		if(rankingModel.equalsIgnoreCase(Constants.RANKING_MODEL_VS) || rankingModel.equalsIgnoreCase(Constants.RANKING_MODEL_OK))
+	public boolean validRankingModel(String rankingModel) {
+		if (rankingModel.equalsIgnoreCase(Constants.RANKING_MODEL_VS)
+				|| rankingModel.equalsIgnoreCase(Constants.RANKING_MODEL_OK))
 			return true;
 		else
 			return false;
 	}
-	
-	
-	/**Checks whether the file at the given path is a valid html
+
+	/**
+	 * Checks whether the file at the given path is a valid html
+	 * 
 	 * @param path
 	 * @return
 	 */
@@ -51,7 +54,9 @@ public class Utils {
 		}
 	}
 
-	/**Reads the file from the provided path and generates Source object
+	/**
+	 * Reads the file from the provided path and generates Source object
+	 * 
 	 * @param path
 	 * @return Source
 	 */
@@ -71,67 +76,77 @@ public class Utils {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		Source source = new Source(contents);//construct a Source object from the data in given file
-		source.fullSequentialParse();//Parses all of the tags in this source document sequentially from beginning to end.
+		Source source = new Source(contents);// construct a Source object from
+												// the data in given file
+		source.fullSequentialParse();// Parses all of the tags in this source
+										// document sequentially from beginning
+										// to end.
 		return source;
 
 	}
-	
-	/**Prints content in the Title Element of HTML file source
+
+	/**
+	 * Prints content in the Title Element of HTML file source
+	 * 
 	 * @param source
 	 */
-	public void printTitle(Source source) 
-	{
-		Element title = source.getFirstElement(HTMLElementName.TITLE);	//checks for title tag
-		
-		if (title!=null) {
-			System.out.println(Constants.DOC_TITLE_MSG+ title.getContent());
-		}
-		else {
+	public void printTitle(Source source) {
+		Element title = source.getFirstElement(HTMLElementName.TITLE); // checks
+																		// for
+																		// title
+																		// tag
+
+		if (title != null) {
+			System.out.println(Constants.DOC_TITLE_MSG + title.getContent());
+		} else {
 			System.out.println(Constants.DOC_NO_TITLE);
 		}
 	}
-	
-	/**Prints content in the Summary Element of HTML file source
+
+	/**
+	 * Prints content in the Summary Element of HTML file source
+	 * 
 	 * @param source
 	 */
-	public void printSummary(Source source)
-	{
-		Element summary = source.getFirstElement(HTMLElementName.SUMMARY); //checks for summary tag
-		
-		if (summary!=null) {
-		 System.out.println(Constants.DOC_SUMMARY_MSG+ summary.getContent());
-		}
-		else {
+	public void printSummary(Source source) {
+		Element summary = source.getFirstElement(HTMLElementName.SUMMARY); // checks
+																			// for
+																			// summary
+																			// tag
+
+		if (summary != null) {
+			System.out.println(Constants.DOC_SUMMARY_MSG + summary.getContent());
+		} else {
 			System.out.println(Constants.DOC_NO_SUMMARY);
 		}
 	}
-	
-	/**Print an empty line
+
+	/**
+	 * Print an empty line
 	 * 
 	 */
-	public void insertNewLine(){
+	public void insertNewLine() {
 		System.out.println("\n");
 	}
-	
-	
-	/**Return the similarity to be set for indexing and searching as per the user input
+
+	/**
+	 * Return the similarity to be set for indexing and searching as per the
+	 * user input
+	 * 
 	 * @param rankingModel
 	 * @return Similarity
 	 */
-	public Similarity getSimilarity(String rankingModel){
+	public Similarity getSimilarity(String rankingModel) {
 		Similarity classicSimilarity = new ClassicSimilarity();
 		Similarity bm25Similarity = new BM25Similarity();
-		if(rankingModel.equalsIgnoreCase(Constants.RANKING_MODEL_VS)){
+		if (rankingModel.equalsIgnoreCase(Constants.RANKING_MODEL_VS)) {
 			return classicSimilarity;
-		}
-		else if(rankingModel.equalsIgnoreCase(Constants.RANKING_MODEL_OK)){
+		} else if (rankingModel.equalsIgnoreCase(Constants.RANKING_MODEL_OK)) {
 			return bm25Similarity;
-		}
-		else{
+		} else {
 			return classicSimilarity;
 		}
-		
+
 	}
 
 }

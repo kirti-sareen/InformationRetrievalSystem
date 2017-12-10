@@ -83,7 +83,6 @@ public class IndexingManager {
 			IndexWriter indexWriter = new IndexWriter(directory, indexWriterConfig);
 			indexFiles(indexWriter, docPath);
 			indexWriter.close();
-			
 
 			IndexReader indexReader = DirectoryReader.open(FSDirectory.open(indexFilePath));
 			System.out.println("Total indexed file: " + indexReader.numDocs());
@@ -93,7 +92,7 @@ public class IndexingManager {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
+
 	}
 
 	/**
@@ -165,21 +164,19 @@ public class IndexingManager {
 				System.out.println(Constants.UPDATE_INDEX + filePath);
 				indexWriter.updateDocument(new Term(Constants.FIELD_PATH, filePath.toString()), document);// Delete
 			}
-			
+
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 	}
-	
-	public static void getParsedDocs(Path indexPath)
-	{
+
+	public static void getParsedDocs(Path indexPath) {
 		try {
 			IndexReader reader = DirectoryReader.open(FSDirectory.open(indexPath));
 			Document tempDoc = null;
-			for(int i=0;i<reader.numDocs();i++)
-			{
+			for (int i = 0; i < reader.numDocs(); i++) {
 				tempDoc = reader.document(i);
-				System.out.println((i+1)+". "+tempDoc.get(Constants.FIELD_PATH));
+				System.out.println((i + 1) + ". " + tempDoc.get(Constants.FIELD_PATH));
 			}
 			reader.close();
 		} catch (IOException e) {
