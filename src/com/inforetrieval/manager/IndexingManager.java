@@ -68,16 +68,12 @@ public class IndexingManager {
 			/*
 			 * Creating index in directory
 			 */
-			if (Files.notExists(indexFilePath)) {
+			
 				// Create a new index in the directory, removing any previously
 				// indexed documents:
 				indexWriterConfig.setOpenMode(OpenMode.CREATE);
 				directory = FSDirectory.open(indexFilePath);
-			} else {
-				// Add new documents to an existing index:
-				indexWriterConfig.setOpenMode(OpenMode.CREATE_OR_APPEND);
-				directory = FSDirectory.open(indexFilePath);
-			}
+			
 			Utils util = new Utils();
 			indexWriterConfig.setSimilarity(util.getSimilarity(rankingModel));
 			IndexWriter indexWriter = new IndexWriter(directory, indexWriterConfig);
@@ -160,9 +156,6 @@ public class IndexingManager {
 				// New index, adding new document:
 				System.out.println(Constants.ADD_INDEX + filePath);
 				indexWriter.addDocument(document);
-			} else if (indexWriter.getConfig().getOpenMode() == OpenMode.CREATE_OR_APPEND) {
-				System.out.println(Constants.UPDATE_INDEX + filePath);
-				indexWriter.updateDocument(new Term(Constants.FIELD_PATH, filePath.toString()), document);// Delete
 			}
 
 		} catch (Exception e) {
